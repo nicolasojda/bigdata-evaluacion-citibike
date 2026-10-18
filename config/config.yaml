@@ -1,0 +1,38 @@
+# Configuración del pipeline de Big Data (NYC Citi Bike en GCP)
+
+gcp:
+  project_id: bigdata-evaluacion-2-511416
+  location: US            # misma ubicación que bigquery-public-data.new_york_citibike
+
+bigquery:
+  dataset: citibike_optimizada
+  source_table: bigquery-public-data.new_york_citibike.citibike_trips
+  optimized_table: viajes_particionados
+  models:
+    base: modelo_prediccion_duracion          # iteración 1
+    filtered: modelo_prediccion_duracion_v2   # iteración 2
+
+storage:
+  # Solo se usa en el paso opcional de exportación a Parquet (requiere facturación)
+  bucket: bigdata-citibike-511416
+  parquet_prefix: citibike/parquet
+
+modelo:
+  duracion_min_seg: 60
+  duracion_max_seg: 7200
+  anio_desde: 2016
+  fraccion_evaluacion: 0.2
+  muestra_entrenamiento: 0.1   # muestra determinística por límite de almacenamiento del sandbox
+
+# Orden de ejecución del pipeline. Los pasos marcados como opcionales
+# solo se ejecutan con la opción --incluir-opcionales.
+pipeline:
+  - archivo: sql/01_creacion_tabla_optimizada.sql
+    descripcion: Ingesta por lotes y tabla particionada y clusterizada
+  - archivo: sql/04_modelo_filtrado.sql
+    descripcion: Entrenamiento del modelo de la iteración 2
+  - archivo: sql/05_evaluacion_prediccion.sql
+    descripcion: Evaluación e inferencia del modelo
+  - archivo: sql/06_exportacion_parquet.sql
+    descripcion: Exportación a Parquet en Cloud Storage
+    opcional: true
